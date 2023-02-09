@@ -1,0 +1,160 @@
+package com.alfresco;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.chemistry.opencmis.client.api.CmisObject;
+import org.apache.chemistry.opencmis.client.api.Document;
+import org.apache.chemistry.opencmis.client.api.Folder;
+import org.apache.chemistry.opencmis.client.api.Session;
+import org.apache.chemistry.opencmis.client.api.SessionFactory;
+import org.apache.chemistry.opencmis.client.runtime.SessionFactoryImpl;
+import org.apache.chemistry.opencmis.commons.PropertyIds;
+import org.apache.chemistry.opencmis.commons.SessionParameter;
+import org.apache.chemistry.opencmis.commons.data.ContentStream;
+import org.apache.chemistry.opencmis.commons.enums.BindingType;
+import org.apache.chemistry.opencmis.commons.enums.VersioningState;
+public class AlfrescoFileUpload {
+public static void main(String[] args) throws FileNotFoundException {
+// default factory implementation
+  SessionFactory factory = SessionFactoryImpl.newInstance();
+  Map<String, String> parameter = new HashMap<String, String>();
+// user credentials
+  parameter.put(SessionParameter.USER, "admin");
+  parameter.put(SessionParameter.PASSWORD, "admin");
+// connection settings
+  parameter.put(SessionParameter.ATOMPUB_URL, "http://127.0.0.1:8080/alfresco/api/-default-/public/cmis/versions/1.1/atom");
+  parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+// create session
+  Session session = factory.getRepositories(parameter).get(0).createSession();
+  Folder root = session.getRootFolder();
+
+   
+//fectch the folder
+  //EverifScheme --ec2d7e8e-b365-451d-86b5-92f973b837aa
+  //InfoReq -- aa5e82f5-629b-49d8-8597-2ee615e02c71
+  // NoticeResp -- 891dea5b-9dc0-42b2-b471-e4781da0597d 
+  
+ CmisObject cmisObject = session.getObject("891dea5b-9dc0-42b2-b471-e4781da0597d"); //NoticeResp
+ System.out.print("shikha name="+cmisObject.getName());
+ System.out.print("shikha id="+cmisObject.getId());
+ System.out.print("shikha name test="+root.getId());
+ Folder parent = (Folder)cmisObject;
+ 
+ // get current date
+  
+ String str=currDate();
+ 
+ System.out.println(str);  
+ 
+ String finalfolderid=createFolder(str,"ASSDD7",  cmisObject, session,  parent);
+  
+ System.out.println("final folder id="+finalfolderid);  
+  
+
+	String docUploadPath=documentUpload(cmisObject, session,finalfolderid);
+	System.out.println("final folder upload path="+docUploadPath);  
+ 
+System.out.println("DONE.");
+}
+
+
+
+public static String currDate()
+{
+	DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd");  
+	 LocalDateTime now = LocalDateTime.now();  
+	 String str=dtf.format(now);
+	 return str;
+}
+
+public static String createFolder(String date, String foldername,  CmisObject cmisObject,Session session, Folder parent)
+{
+	System.out.println(date);  
+	 
+	 String[] arrOfStr=date.split("/");
+	 System.out.println("shikha="+arrOfStr[0]);
+	 //String st=null;
+	 String fid=foldername; //"ASSDD7";
+	 String finalfolderid=null;
+	 String finalfolderpath=null;
+	 for (int i=0;i<=arrOfStr.length;i++)
+	 {
+
+	 // create folder logic
+	//properties
+	 Map<String, Object> properties = new HashMap<String, Object>();
+	 properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
+	 if(i>2)
+	 {
+		 properties.put(PropertyIds.NAME, fid); // folder name
+	 }
+	 else
+	 {
+	     System.out.println(arrOfStr[i]);
+	 properties.put(PropertyIds.NAME, arrOfStr[i]); // folder name
+	 }
+
+	 // create the folder
+	 
+	 if(i>0)
+	 {
+
+	 	cmisObject = session.getObject(finalfolderid);
+	 	parent = (Folder)cmisObject;
+	 }
+	 
+
+	 Folder child = parent.createFolder(properties);
+	  //st=child.getId();
+	  finalfolderid=child.getId();
+	  finalfolderpath=child.getPath();
+	 System.out.println("DONE."+finalfolderid);// need to be saved in db
+	 System.out.println("DONE."+finalfolderpath);// need to be saved in db
+	 }
+	 return finalfolderid;
+	 
+}
+
+public static String documentUpload(CmisObject cmisObject,Session session,String finalfolderid) throws FileNotFoundException
+{
+
+	 cmisObject = session.getObject(finalfolderid); //finalfolder
+
+	 Folder docUploadfolder = (Folder)cmisObject;
+	 String docUploadfolderPath=docUploadfolder.getPath();
+	 System.out.println("shikha="+docUploadfolderPath);
+	 
+
+			  
+	  File directoryPath = new File("D:\\testfiles");
+	  File filesList[] = directoryPath.listFiles();
+	  File file=filesList[0];
+	String name = file.getName();
+
+	// properties
+	  Map<String, Object> properties2 = new HashMap<String, Object>();
+	  properties2.put(PropertyIds.OBJECT_TYPE_ID, "cmis:document");
+	  properties2.put(PropertyIds.NAME, name);
+	// content
+	 
+	 InputStream stream = new FileInputStream(file);
+			  //ByteArrayInputStream(input.getBytes());
+	  ContentStream contentStream = session.getObjectFactory().
+			  createContentStream(
+					    name,
+					    file.length(),
+					    "application/pdf",
+					    new FileInputStream(file)
+					  );
+			  
+	// create a major version
+	  Document newDoc = docUploadfolder.createDocument(properties2, contentStream, VersioningState.MAJOR);
+	  
+	  return docUploadfolderPath;
+}
+}

@@ -1,0 +1,343 @@
+package com.alfresco;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import org.apache.chemistry.opencmis.client.api.CmisObject;
+import org.apache.chemistry.opencmis.client.api.Document;
+import org.apache.chemistry.opencmis.client.api.Folder;
+import org.apache.chemistry.opencmis.client.api.Session;
+import org.apache.chemistry.opencmis.client.api.SessionFactory;
+import org.apache.chemistry.opencmis.client.runtime.SessionFactoryImpl;
+import org.apache.chemistry.opencmis.commons.PropertyIds;
+import org.apache.chemistry.opencmis.commons.SessionParameter;
+import org.apache.chemistry.opencmis.commons.data.ContentStream;
+import org.apache.chemistry.opencmis.commons.enums.BindingType;
+import org.apache.chemistry.opencmis.commons.enums.VersioningState;
+public class AlfrescoSample {
+	
+public static void main(String[] args) throws FileNotFoundException, SQLException {
+// default factory implementation
+  SessionFactory factory = SessionFactoryImpl.newInstance();
+  Map<String, String> parameter = new HashMap<String, String>();
+// user credentials
+  parameter.put(SessionParameter.USER, "admin");
+  parameter.put(SessionParameter.PASSWORD, "admin");
+// connection settings
+  parameter.put(SessionParameter.ATOMPUB_URL, "http://127.0.0.1:8080/alfresco/api/-default-/public/cmis/versions/1.1/atom");
+  parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+// create session
+  Session session = factory.getRepositories(parameter).get(0).createSession();
+  Folder root = session.getRootFolder();
+ 
+
+//fectch the folder
+  //EverifScheme --ec2d7e8e-b365-451d-86b5-92f973b837aa
+  //InfoReq -- aa5e82f5-629b-49d8-8597-2ee615e02c71
+  // NoticeResp -- 891dea5b-9dc0-42b2-b471-e4781da0597d 
+  
+  
+ CmisObject cmisObject = session.getObject("891dea5b-9dc0-42b2-b471-e4781da0597d"); //NoticeResp
+ System.out.print("shikha name="+cmisObject.getName());
+ System.out.print("shikha id="+cmisObject.getId());
+ System.out.print("shikha name test="+root.getId());
+ Folder parent = (Folder)cmisObject;
+ 
+ // get current date
+  
+ String str=currDate();
+ 
+ System.out.println(str);  
+ 
+ String finalfolderid=createFolder(str,"ASSDD7",  cmisObject, session,  parent);
+  
+ System.out.println("final folder id="+finalfolderid);  
+  
+
+	String docUploadPath=documentUpload(cmisObject, session,finalfolderid);
+	System.out.println("final folder upload path="+docUploadPath); 
+	 //insert into db
+	   final String url = "jdbc:postgresql://localhost/postgres";
+	   final String user = "postgres";
+	   final String password = "admin";
+	  insertRecord( url,user,password,docUploadPath);
+	
+	 ZipFolderContents(session);
+	 
+	 
+System.out.println("DONE.");
+}
+
+
+
+public static String currDate()
+{
+	DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");  
+	 LocalDateTime now = LocalDateTime.now();  
+	 String str=dtf.format(now);
+	 return str;
+}
+
+public static String currDateTimestamp()
+{
+	DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss");  
+	 LocalDateTime now = LocalDateTime.now();  
+	 String str=dtf.format(now);
+	 return str;
+}
+
+public static String createFolder(String date, String foldername,  CmisObject cmisObject,Session session, Folder parent)
+{
+	System.out.println(date);  
+	 
+	 String[] arrOfStr=date.split("-");
+	 System.out.println("shikha="+arrOfStr[0]);
+	 
+	 String fid=foldername; //"ASSDD7";
+	 String finalfolderid=null;
+	 String finalfolderpath=null;
+	 for (int i=0;i<=arrOfStr.length;i++)
+	 {
+
+	 // create folder logic
+	//properties
+	 Map<String, Object> properties = new HashMap<String, Object>();
+	 properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
+	 if(i>2)
+	 {
+		 properties.put(PropertyIds.NAME, fid); // folder name
+	 }
+	 else
+	 {
+	     System.out.println(arrOfStr[i]);
+	 properties.put(PropertyIds.NAME, arrOfStr[i]); // folder name
+	 }
+
+	 // create the folder
+	 
+	 if(i>0)
+	 {
+
+	 	cmisObject = session.getObject(finalfolderid);
+	 	parent = (Folder)cmisObject;
+	 }
+	 
+
+	 Folder child = parent.createFolder(properties);
+	  //st=child.getId();
+	  finalfolderid=child.getId();
+	  finalfolderpath=child.getPath();
+	 System.out.println("DONE."+finalfolderid);// need to be saved in db
+	 System.out.println("DONE."+finalfolderpath);// need to be saved in db
+	 }
+	 return finalfolderid;
+	 
+}
+
+public static String documentUpload(CmisObject cmisObject,Session session,String finalfolderid) throws FileNotFoundException
+{
+
+	 cmisObject = session.getObject(finalfolderid); //finalfolder
+
+	 Folder docUploadfolder = (Folder)cmisObject;
+	 String docUploadfolderPath=docUploadfolder.getPath();
+	 System.out.println("shikha="+docUploadfolderPath);
+	 
+
+			  
+	  File directoryPath = new File("D:\\testfiles");
+	  File filesList[] = directoryPath.listFiles();
+	  File file=filesList[0];
+	String name = file.getName();
+
+	// properties
+	  Map<String, Object> properties2 = new HashMap<String, Object>();
+	  properties2.put(PropertyIds.OBJECT_TYPE_ID, "cmis:document");
+	  properties2.put(PropertyIds.NAME, name);
+	// content
+	 
+	 InputStream stream = new FileInputStream(file);
+			  
+	  ContentStream contentStream = session.getObjectFactory().
+			  createContentStream(
+					    name,
+					    file.length(),
+					    "application/pdf",
+					    new FileInputStream(file)
+					  );
+			  
+	// create a major version
+	  Document newDoc = docUploadfolder.createDocument(properties2, contentStream, VersioningState.MAJOR);
+	  
+	  downloadDocumentByID(session, newDoc.getId(),newDoc.getName(),"D://downloadtest/");
+	  
+	  return docUploadfolderPath;
+}
+
+public static void downloadDocumentByID( Session session, String documentID,String fileName,String destinationFolder){
+    String    fullPath= destinationFolder + fileName;
+
+    Folder root = session.getRootFolder();
+   
+    
+    Document newDocument =  (Document) session.getObject(documentID);
+    System.out.println("shikhaDoc="+newDocument.getId());
+    try {
+     ContentStream cs = newDocument.getContentStream(null);
+         BufferedInputStream in =new BufferedInputStream(cs.getStream());
+                 FileOutputStream fos = new FileOutputStream(fullPath);
+                 OutputStream bufferedOutputStream = new BufferedOutputStream(fos);
+                 byte[] buf = new byte[1024];
+                 int n=0;
+                 while ((n=in.read(buf))>0)
+                 {
+                     bufferedOutputStream.write(buf,0,n);
+                 }
+     bufferedOutputStream.close();
+                 fos.close();
+                 in.close();
+     }
+    catch (IOException e)
+    {
+     throw new RuntimeException(e.getLocalizedMessage());
+    }
+  }
+
+public static void ZipFolderContents(Session session)
+{
+	Folder newfolder=(Folder) session.getObject("aa5e82f5-629b-49d8-8597-2ee615e02c71");
+	ArrayList<String> filelist=new ArrayList<String>();
+	String outputfolderPath="D://downloadtest/";
+    for (CmisObject child: newfolder.getChildren()) {
+        System.out.println(child.getName()+"::::::"+child.getId());
+        filelist.add(child.getName());
+        downloadDocumentByID(session, child.getId(),child.getName(),"D://downloadtest/");
+        
+    }
+    
+    createZipfolder(filelist,  outputfolderPath, "ahxpn3423k");
+    
+}
+
+public static void printZipFiles() {
+    System.out.print("\nThe zip files in the current directory is: \n");
+    File curDir = new File(".");
+    File[] filesList = curDir.listFiles();
+    for(File f : filesList){
+        if(f.getName().contains(".zip")){
+            System.out.print(f.getName() + ", ");
+        }
+    }
+}
+
+public static void createZipfolder(ArrayList<String> filesToBeWritten, String outputfolderPath, String foldername)
+{
+	String date=currDateTimestamp();
+	 String outputZipFileName = outputfolderPath+foldername+date+".zip";
+			
+     try {
+         printZipFiles();
+         // create a ZipOutputStream object
+         FileOutputStream fos = new FileOutputStream(outputZipFileName);
+         ZipOutputStream zos = new ZipOutputStream(fos);
+         
+         for (int i=0; i < filesToBeWritten.size(); i++) {
+              
+             File srcFile = new File(outputfolderPath+filesToBeWritten.get(i));
+             FileInputStream fis = new FileInputStream(srcFile);
+
+             // Start writing a new file entry 
+             zos.putNextEntry(new ZipEntry(srcFile.getName())); 
+
+             int length;
+             // create byte buffer
+             byte[] buffer = new byte[1024];
+
+             // read and write the content of the file
+             while ((length = fis.read(buffer)) > 0) {
+                 zos.write(buffer, 0, length);
+             }
+             // current file entry is written and current zip entry is closed
+             zos.closeEntry();
+
+             // close the InputStream of the file 
+             fis.close();
+             srcFile.delete();
+              
+         }
+
+         // close the ZipOutputStream
+         zos.close();
+         System.out.println("\nThe file is written successfully");
+         printZipFiles();
+     }
+     catch (IOException ioe) {
+         System.out.println("Error creating zip file: " + ioe);
+     }
+}
+
+
+public static void printSQLException(SQLException ex) {
+    for (Throwable e: ex) {
+        if (e instanceof SQLException) {
+            e.printStackTrace(System.err);
+            System.err.println("SQLState: " + ((SQLException) e).getSQLState());
+            System.err.println("Error Code: " + ((SQLException) e).getErrorCode());
+            System.err.println("Message: " + e.getMessage());
+            Throwable t = ex.getCause();
+            while (t != null) {
+                System.out.println("Cause: " + t);
+                t = t.getCause();
+            }
+        }
+    }
+}
+
+public static void insertRecord(String url, String user, String password,String path) throws SQLException {
+	//postgresql-9.1-901.jdbc4.jar added for driver  
+	
+	String INSERT_USERS_SQL = "INSERT INTO ais.userdtls" +
+		        "  (slno, username, useremail, roles, password) VALUES " +
+		        " (?, ?, ?, ?, ?);";
+    System.out.println(INSERT_USERS_SQL);
+	// Step 1: Establishing a Connection
+    try (Connection connection = DriverManager.getConnection(url, user, password);
+
+        // Step 2:Create a statement using connection object
+        PreparedStatement preparedStatement = connection.prepareStatement(INSERT_USERS_SQL)) {
+        preparedStatement.setInt(1, 3);
+        preparedStatement.setString(2, "Tony");
+        preparedStatement.setString(3, "tony@gmail.com");
+        preparedStatement.setString(4, path);
+        preparedStatement.setString(5, "secret");
+
+        System.out.println(preparedStatement);
+        
+        preparedStatement.executeUpdate();
+    } catch (SQLException e) {
+
+       
+        printSQLException(e);
+    }
+
+   
+}
+}

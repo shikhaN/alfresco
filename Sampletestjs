@@ -1,0 +1,59 @@
+sample
+
+// Specify the site ID (you can change this or retrieve dynamically)
+var siteId = "my-site-id";
+
+// Get the site object
+var site = siteService.getSite(siteId);
+
+if (site == null) {
+    model.message = "Site with ID " + siteId + " does not exist.";
+} else {
+    // Site groups are named as 'GROUP_site_<siteId>_<role>'
+    var groupPrefix = "GROUP_site_" + siteId;
+
+    // Array to store the site groups
+    var siteGroups = [];
+
+    // Get the groups for various site roles
+    var siteManagerGroup = people.getGroup(groupPrefix + "_SiteManager");
+    var siteCollaboratorGroup = people.getGroup(groupPrefix + "_SiteCollaborator");
+    var siteContributorGroup = people.getGroup(groupPrefix + "_SiteContributor");
+    var siteConsumerGroup = people.getGroup(groupPrefix + "_SiteConsumer");
+
+    // Check if each group exists and add it to the result array
+    if (siteManagerGroup) {
+        siteGroups.push({
+            "groupName": siteManagerGroup.getDisplayName(),
+            "groupFullName": siteManagerGroup.fullName,
+            "role": "SiteManager"
+        });
+    }
+    
+    if (siteCollaboratorGroup) {
+        siteGroups.push({
+            "groupName": siteCollaboratorGroup.getDisplayName(),
+            "groupFullName": siteCollaboratorGroup.fullName,
+            "role": "SiteCollaborator"
+        });
+    }
+
+    if (siteContributorGroup) {
+        siteGroups.push({
+            "groupName": siteContributorGroup.getDisplayName(),
+            "groupFullName": siteContributorGroup.fullName,
+            "role": "SiteContributor"
+        });
+    }
+
+    if (siteConsumerGroup) {
+        siteGroups.push({
+            "groupName": siteConsumerGroup.getDisplayName(),
+            "groupFullName": siteConsumerGroup.fullName,
+            "role": "SiteConsumer"
+        });
+    }
+
+    // Output the result
+    model.siteGroups = siteGroups;
+}

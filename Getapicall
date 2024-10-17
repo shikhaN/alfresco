@@ -1,0 +1,24 @@
+// Define the Alfresco API endpoint
+var endpoint = "/alfresco/service/api/sites";  // The internal Alfresco API
+
+// Create a connector to communicate with the Alfresco repository
+var connector = remote.connect("alfresco");
+
+// Make the GET request
+var response = connector.get(endpoint);
+
+// Check if the API call was successful (HTTP status code 200 means success)
+if (response.status == 200) {
+    // Parse the JSON response
+    var sites = JSON.parse(response.response);
+    
+    // Iterate over the list of sites and log their information
+    for (var i = 0; i < sites.length; i++) {
+        var site = sites[i];
+        logger.log("Site short name: " + site.shortName);
+        logger.log("Site title: " + site.title);
+    }
+} else {
+    // Log an error if the API call failed
+    logger.log("Failed to retrieve sites. Status: " + response.status + " Response: " + response.response);
+}

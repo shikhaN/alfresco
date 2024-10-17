@@ -1,0 +1,22 @@
+// Define the API endpoint and data to send
+var endpoint = "/alfresco/service/api/sites";
+var postData = JSON.stringify({
+    "shortName": "new-site",
+    "sitePreset": "site-dashboard",
+    "title": "New Site",
+    "description": "Description of the new site",
+    "visibility": "PUBLIC"
+});
+
+// Create the connection
+var connector = remote.connect("alfresco");
+
+// Make the POST request
+var response = connector.post(endpoint, postData, "application/json");
+
+// Check if the request was successful
+if (response.status == 200) {
+    logger.log("Site created successfully. Response: " + response.response);
+} else {
+    logger.log("Failed to create site. Status: " + response.status + " Message: " + response.response);
+}

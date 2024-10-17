@@ -1,3 +1,7 @@
+example: var connector = remote.connect("externalAPI"); // Name of the external connector
+var response = connector.get("https://api.example.com/data");
+
+-----------
 // Define the API endpoint and data to send
 var endpoint = "/alfresco/service/api/sites";
 var postData = JSON.stringify({

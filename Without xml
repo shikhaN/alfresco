@@ -1,0 +1,11 @@
+function callAlfrescoJSONPAPI() {
+  const url = 'https://example.com/alfresco/service/api/path-to-your-api?callback=myCallback'; // API must support JSONP
+
+  const script = document.createElement('script');
+  script.src = url;
+  document.body.appendChild(script);
+}
+
+function myCallback(data) {
+  console.log('Success:', data);
+}

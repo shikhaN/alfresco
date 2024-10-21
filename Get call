@@ -1,0 +1,19 @@
+function callAlfrescoGetAPI() {
+  const url = '/alfresco/service/api/path-to-your-api'; // Replace with your Alfresco API endpoint
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.setRequestHeader('Authorization', 'Basic ' + btoa('username:password')); // Replace with your credentials
+
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        console.log('Success:', JSON.parse(xhr.responseText));
+      } else {
+        console.error('Error:', xhr.status, xhr.statusText);
+      }
+    }
+  };
+
+  xhr.send(); // No body required for GET requests
+}

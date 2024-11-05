@@ -1,0 +1,21 @@
+SELECT 
+    proc.id_ AS workflow_id,
+    proc.proc_def_id_ AS workflow_definition,
+    proc.start_time_ AS workflow_start_time,
+    task.id_ AS task_id,
+    task.name_ AS task_name,
+    task.assignee_ AS task_assignee,
+    site.node_id AS site_node_id,
+    site.name AS site_name
+FROM 
+    act_hi_procinst proc
+JOIN 
+    act_ru_task task ON proc.proc_inst_id_ = task.proc_inst_id_
+JOIN 
+    alf_node site ON site.node_id = proc.business_key_
+JOIN 
+    alf_qname qname ON site.type_qname_id = qname.id
+WHERE 
+    proc.end_time_ IS NULL 
+    AND qname.local_name = 'site'
+    AND site.name = '<YOUR_SITE_NAME>';

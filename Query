@@ -1,0 +1,28 @@
+SELECT 
+    proc.ID_ AS process_instance_id,
+    proc.BUSINESS_KEY_ AS business_key,
+    proc.START_TIME_ AS start_time,
+    task.NAME_ AS task_name,
+    task.ASSIGNEE_ AS assignee,
+    node.uuid AS site_uuid,
+    site_name_prop.string_value AS site_name
+FROM 
+    ACT_HI_PROCINST proc
+JOIN 
+    ACT_HI_TASKINST task ON proc.PROC_INST_ID_ = task.PROC_INST_ID_
+JOIN 
+    alf_node AS node ON node.uuid = REPLACE(SUBSTRING(proc.BUSINESS_KEY_, LOCATE('workspace://SpacesStore/', proc.BUSINESS_KEY_) + 22), '/', '')
+JOIN 
+    alf_node_properties AS site_name_prop ON node.id = site_name_prop.node_id
+JOIN 
+    alf_qname AS qn ON site_name_prop.qname_id = qn.id
+JOIN 
+    alf_namespace AS ns ON qn.ns_id = ns.id
+WHERE 
+    proc.END_TIME_ IS NULL               -- Active processes
+    AND task.END_TIME_ IS NULL           -- Active tasks
+    AND proc.BUSINESS_KEY_ LIKE '%site-siteName%'  -- Replace 'siteName' with your site's name
+    AND qn.local_name = 'name'           -- Assuming 'cm:name' holds the site name
+    AND ns.uri = 'http://www.alfresco.org/model/content/1.0'
+ORDER BY 
+    proc.START_TIME_ DESC;

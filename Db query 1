@@ -1,0 +1,7 @@
+SELECT assoc.qname AS association_name, 
+       source_node.node_id AS source_node_id,
+       target_node.node_id AS target_node_id
+FROM alf_child_assoc assoc
+JOIN alf_node source_node ON assoc.parent_node_id = source_node.id
+JOIN alf_node target_node ON assoc.child_node_id = target_node.id
+WHERE source_node.node_uuid = 'your-node-ref-here' OR target_node.node_uuid = 'your-node-ref-here';

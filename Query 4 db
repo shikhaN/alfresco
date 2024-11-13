@@ -1,0 +1,35 @@
+SELECT
+    ws.short_name AS site_name,
+    n.node_uuid AS node_id,
+    c.content_url AS document_name,
+    aw.proc_inst_id_ AS workflow_instance_id,
+    aw.name_ AS workflow_name,
+    aw.start_time_ AS workflow_start_time,
+    aw.status_ AS workflow_status,
+    at.task_def_key_ AS task_name,
+    at.assignee_ AS assigned_to,
+    at.create_time_ AS task_created,
+    at.end_time_ AS task_completed
+FROM
+    alf_node n
+JOIN
+    alf_qname qn ON n.type_qname_id = qn.id
+JOIN
+    alf_child_assoc ca ON n.id = ca.child_node_id
+JOIN
+    alf_node sn ON ca.parent_node_id = sn.id
+JOIN
+    alf_store s ON sn.store_id = s.id
+JOIN
+    alf_site ws ON ws.node_uuid = sn.node_uuid
+JOIN
+    alf_content_data c ON n.id = c.node_id
+JOIN
+    ACT_RU_EXECUTION aw ON aw.BUSINESS_KEY_ = n.node_uuid
+JOIN
+    ACT_RU_TASK at ON aw.proc_inst_id_ = at.proc_inst_id_
+WHERE
+    ws.is_site = TRUE
+    AND aw.status_ = 'ACTIVE'
+    AND s.protocol = 'workspace'
+    AND s.identifier = 'SpacesStore';
